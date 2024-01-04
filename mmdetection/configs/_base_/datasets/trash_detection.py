@@ -1,5 +1,5 @@
 # dataset settings
-dataset_type = 'TrashDataset'
+dataset_type = 'CocoDataset'
 data_root = '/root/dataset'
 
 # Example to use different file client
