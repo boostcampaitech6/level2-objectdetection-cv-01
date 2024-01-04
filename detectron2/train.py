@@ -58,7 +58,7 @@ def setup_config(args):
     data = json.load(open(f'{args.data_dir}/train.json'))
 
     cfg.SOLVER.MAX_ITER = int(len(data['images']) / cfg.SOLVER.IMS_PER_BATCH * args.epochs)
-    cfg.SOLVER.BASE_LR = 0.001
+    cfg.SOLVER.BASE_LR = 0.0001
     cfg.SOLVER.STEPS = (2000, 4000)
     cfg.SOLVER.GAMMA = 0.005
     cfg.SOLVER.CHECKPOINT_PERIOD = 3000
@@ -80,7 +80,7 @@ def register_dataset(args):
             register_coco_instances('coco_trash_' + data, {}, f'{args.data_dir}/{data}.json', args.data_dir)
         except AssertionError:
             pass
-        
+
     MetadataCatalog.get("coco_trash_train").set(thing_classes=["General trash", "Paper", "Paper pack", "Metal", 
                                                         "Glass", "Plastic", "Styrofoam", "Plastic bag", "Battery", "Clothing"])
 
