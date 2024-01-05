@@ -33,10 +33,11 @@ def parse_args():
 
     parser.add_argument('--seed', type=int, default=42, help='Fixed Seed')
     parser.add_argument('--data_dir', type=str, default='/root/dataset/', help='Train data dir')
+    parser.add_argument('--k_fold', type=int, default=0, help='select k fold number')
     parser.add_argument('--output_dir', type=str, default='./output/')
     parser.add_argument('--config_path', type=str, default='COCO-Detection', help='select config path')
     parser.add_argument('--model', type=str, default='faster_rcnn_R_101_FPN_3x', help='train model name')
-    parser.add_argument('--epochs', type=int, default=1, help='train epochs')
+    parser.add_argument('--epochs', type=int, default=10, help='train epochs')
     args = parser.parse_args()
 
     return args
@@ -48,17 +49,17 @@ def setup_config(args):
     cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(f'{args.config_path}/{args.model}.yaml')
 
     cfg.DATASETS.TRAIN = ('coco_trash_train',)
-    cfg.DATASETS.TEST = ('coco_trash_test',)
+    cfg.DATASETS.TEST = ('coco_trash_val',)
 
     cfg.DATALOADER.NUM_WOREKRS = 2
 
     cfg.MODEL.MASK_ON = False
-    cfg.SOLVER.IMS_PER_BATCH = 16
+    cfg.SOLVER.IMS_PER_BATCH = 4
     
     data = json.load(open(f'{args.data_dir}/train.json'))
 
     cfg.SOLVER.MAX_ITER = int(len(data['images']) / cfg.SOLVER.IMS_PER_BATCH * args.epochs)
-    cfg.SOLVER.BASE_LR = 0.0001
+    cfg.SOLVER.BASE_LR = 0.001
     cfg.SOLVER.STEPS = (2000, 4000)
     cfg.SOLVER.GAMMA = 0.005
     cfg.SOLVER.CHECKPOINT_PERIOD = 3000
@@ -75,9 +76,9 @@ def setup_config(args):
     return cfg
 
 def register_dataset(args):
-    for data in ['train', 'test']:
+    for data in ['train', 'val']:
         try:
-            register_coco_instances('coco_trash_' + data, {}, f'{args.data_dir}/{data}.json', args.data_dir)
+            register_coco_instances('coco_trash_' + data, {}, f'{args.data_dir}/{data}_kfold_{args.k_fold}.json', args.data_dir)
         except AssertionError:
             pass
 
@@ -89,7 +90,7 @@ def TrainMapper(dataset_dict):
     image = utils.read_image(dataset_dict['file_name'], format='BGR')
     
     transform_list = [
-        # T.Resize((1024, 1024)),
+        T.Resize((1024, 1024)),
         T.RandomFlip(prob=0.5, horizontal=True, vertical=False),
         T.RandomBrightness(0.8, 1.8),
         T.RandomContrast(0.6, 1.3),
