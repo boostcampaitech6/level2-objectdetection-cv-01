@@ -166,4 +166,4 @@ pnnx*
 
 # Generate files
 *.csv
-/ultralytics/cfg/
+*.yaml
