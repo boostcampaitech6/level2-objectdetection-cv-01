@@ -2,7 +2,7 @@
 
 from ultralytics.utils import SETTINGS, TESTS_RUNNING
 from ultralytics.utils.torch_utils import model_info_for_loggers
-
+import yaml
 try:
     assert not TESTS_RUNNING  # do not log pytest
     assert SETTINGS['wandb'] is True  # verify integration is enabled
@@ -106,8 +106,23 @@ def _log_plots(plots, step):
 
 
 def on_pretrain_routine_start(trainer):
+    '''data_dir 정보 추출'''
+    try:
+        with open(trainer.args.data, 'r') as file:
+            yaml_data = yaml.safe_load(file)
+            data_dir = yaml_data.get('path', None)  # 'path' 키의 값을 가져옴
+    except Exception as e:
+            raise RuntimeError(f"Error reading YAML file: {e}") from e
+
+        # 'path' 정보가 없는 경우 예외 처리
+    if not data_dir:
+            raise ValueError("Path not found in YAML file")
+
     """Initiate and start project if module is present."""
-    wb.run or wb.init(project=trainer.args.project or 'YOLOv8', name=trainer.args.name, config=vars(trainer.args))
+    wb.run or wb.init(project='YOLOv8',
+                      name=f'{trainer.args.model}_{trainer.args.batch}_{data_dir.split("/")[-2:]}',
+                      config=vars(trainer.args),
+                      entity='ai_tech_level2_objectdetection')
 
 
 def on_fit_epoch_end(trainer):
