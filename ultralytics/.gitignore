@@ -166,3 +166,4 @@ pnnx*
 
 # Generate files
 *.csv
+*.yaml

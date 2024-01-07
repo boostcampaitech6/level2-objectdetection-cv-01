@@ -1,12 +1,13 @@
 import argparse
+import yaml
 
 from ultralytics import YOLO
+from ultralytics.utils import checks, yaml_load
 
 def parse_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--cfg", type=str, default="custom.yaml", help="train config file path")
-    parser.add_argument("--weight", type=str, default="yolov8x.pt", help="yolov8 model weight(.pt) or path(outputs/~/best.pt)")
 
     args = parser.parse_args()
 
@@ -14,11 +15,13 @@ def parse_args():
 
 def main(args):
 
-    model = YOLO(args.weight)
+    cfg = yaml_load(checks.check_yaml(args.cfg))
+
+    model = YOLO(cfg.get('model'))
 
     model.train(cfg=args.cfg, data='recycle.yaml')
 
 if __name__ == "__main__":
     args = parse_args()
-    
+
     main(args)
