@@ -163,7 +163,7 @@ class MyTrainer(DefaultTrainer):
                       ]
 
           ret.append(hooks.PeriodicWriter(writerList, period=10))
-          ret.append(hooks.PeriodicWriter([WandB_Printer(name = f'{args.model}_bs{cfg.SOLVER.IMS_PER_BATCH}_{args.data_dir.split("/")[-1]}', project="test",entity="ai_tech_level2_objectdetection")],period=1))
+          ret.append(hooks.PeriodicWriter([WandB_Printer(name = f'{args.model}_bs{cfg.SOLVER.IMS_PER_BATCH}_{args.data_dir.split("/")[-1]}', project="detectron2",entity="ai_tech_level2_objectdetection")],period=1))
 
         return ret
     
