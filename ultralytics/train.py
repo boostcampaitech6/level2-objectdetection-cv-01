@@ -32,7 +32,7 @@ def main(args):
     if not data_dir :
         raise ValueError("Path not found in YAML file")
     
-    wb.init(project=cfg.get('project') or 'YOLOv8',
+    wb.init(project=cfg.get('project') if not None else 'YOLOv8',
                name=cfg.get('model')[:-3] + '_' + str(cfg.get('batch')) + '_' + data_dir,
                entity='ai_tech_level2_objectdetection',
                mode=args.wandbmode)
