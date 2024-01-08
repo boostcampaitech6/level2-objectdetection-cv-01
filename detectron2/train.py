@@ -43,6 +43,8 @@ def parse_args():
     parser.add_argument('--config_path', type=str, default='COCO-Detection', help='select config path')
     parser.add_argument('--model', type=str, default='faster_rcnn_R_101_FPN_3x', help='train model name')
     parser.add_argument('--epochs', type=int, default=10, help='train epochs')
+    parser.add_argument('--mode', type=str, default='online', help='wandb logging mode(on: online, off: disabled)')
+    parser.add_argument('--project', type=str, default='detectron2', help='wandb project name')
     args = parser.parse_args()
 
     return args
@@ -163,14 +165,14 @@ class MyTrainer(DefaultTrainer):
                       ]
 
           ret.append(hooks.PeriodicWriter(writerList, period=10))
-          ret.append(hooks.PeriodicWriter([WandB_Printer(name = f'{args.model}_bs{cfg.SOLVER.IMS_PER_BATCH}_{args.data_dir.split("/")[-1]}', project="detectron2",entity="ai_tech_level2_objectdetection")],period=1))
+          ret.append(hooks.PeriodicWriter([WandB_Printer(name = f'{args.model}_bs{cfg.SOLVER.IMS_PER_BATCH}_{args.data_dir.split("/")[-1]}', project=args.project,entity="ai_tech_level2_objectdetection")],period=1))
 
         return ret
     
 class WandB_Printer(EventWriter) :
     def __init__(self, name, project, entity) -> None :
         self._window_size = 20
-        self.wandb = wandb.init(project=project, entity=entity, name=name)
+        self.wandb = wandb.init(project=project, entity=entity, name=name, mode=args.mode)
 
     def write(self) :
         storage = get_event_storage()
