@@ -19,6 +19,11 @@ from detectron2.data import build_detection_train_loader
 
 import detectron2.data.transforms as T
 
+from detectron2.utils import comm
+from detectron2.engine.defaults import hooks
+from detectron2.utils.events import CommonMetricPrinter, EventWriter, JSONWriter, get_event_storage
+import wandb
+
 def seed_everything(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
@@ -38,6 +43,8 @@ def parse_args():
     parser.add_argument('--config_path', type=str, default='COCO-Detection', help='select config path')
     parser.add_argument('--model', type=str, default='faster_rcnn_R_101_FPN_3x', help='train model name')
     parser.add_argument('--epochs', type=int, default=10, help='train epochs')
+    parser.add_argument('--mode', type=str, default='online', help='wandb logging mode(on: online, off: disabled)')
+    parser.add_argument('--project', type=str, default='detectron2', help='wandb project name')
     args = parser.parse_args()
 
     return args
@@ -78,7 +85,7 @@ def setup_config(args):
 def register_dataset(args):
     for data in ['train', 'val']:
         try:
-            register_coco_instances('coco_trash_' + data, {}, f'{args.data_dir}/{data}_kfold_{args.k_fold}.json', args.data_dir)
+            register_coco_instances('coco_trash_' + data, {}, f'{args.data_dir}/train.json', args.data_dir)
         except AssertionError:
             pass
 
@@ -128,6 +135,60 @@ class MyTrainer(DefaultTrainer):
             output_folder = cfg.OUTPUT_DIR
             
         return COCOEvaluator(dataset_name, cfg, False, output_folder)
+    
+    
+    def build_hooks(self) :
+        cfg = self.cfg.clone()
+        cfg.defrost()
+        cfg.DATALOADER.NUM_WOREKRS = 0
+
+        ret = [
+            hooks.IterationTimer(),
+            hooks.LRScheduler(),
+        ]
+
+        if comm.is_main_process() :
+            ret.append(hooks.PeriodicCheckpointer(self.checkpointer, cfg.SOLVER.CHECKPOINT_PERIOD))
+        
+        def test_and_save_results() :
+            self._last_eval_results = self.test(self.cfg, self.model)
+            return self._last_eval_results
+        
+        ret.append(hooks.EvalHook(cfg.TEST.EVAL_PERIOD, test_and_save_results))
+
+        if comm.is_main_process():
+          # Here the default print/log frequency of each writer is used.
+          # run writers in the end, so that evaluation metrics are written
+          writerList = [
+                        CommonMetricPrinter(self.cfg.SOLVER.MAX_ITER),
+                        JSONWriter(os.path.join(self.cfg.OUTPUT_DIR, "metrics.json")),
+                      ]
+
+          ret.append(hooks.PeriodicWriter(writerList, period=10))
+          ret.append(hooks.PeriodicWriter([WandB_Printer(name = f'{args.model}_bs{cfg.SOLVER.IMS_PER_BATCH}_{args.data_dir.split("/")[-1]}', project=args.project,entity="ai_tech_level2_objectdetection")],period=1))
+
+        return ret
+    
+class WandB_Printer(EventWriter) :
+    def __init__(self, name, project, entity) -> None :
+        self._window_size = 20
+        self.wandb = wandb.init(project=project, entity=entity, name=name, mode=args.mode)
+
+    def write(self) :
+        storage = get_event_storage()
+        send_dict = self._makeStorageDict(storage)
+        self.wandb.log(send_dict)
+
+    def _makeStorageDict(self, storage) :
+        storageDict = {}
+        for k,v in [(k, f"{v.median(self._window_size):.4g}") for k, v in storage.histories().items()]:
+            if "AP" in k:
+        # AP to mAP
+                storageDict[k] = float(v) * 0.01
+            else:
+                storageDict[k] = float(v)
+
+        return storageDict
 
 if __name__ == '__main__':
     args = parse_args()
