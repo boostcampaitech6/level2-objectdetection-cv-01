@@ -4,11 +4,14 @@ import argparse
 parser = argparse.ArgumentParser(description='Test yolo data.')
 parser.add_argument('-j', help='JSON file', dest='json', required=True)
 parser.add_argument('-o', help='path to output folder', dest='out',required=True)
+parser.add_argument('-f', help='flag', dest='flag', type=str, choices=['train', 'val'])
 
 args = parser.parse_args()
 
 json_file = args.json 
-output = args.out 
+output = args.out
+flag = args.flag
+
 class COCO2YOLO:
     def __init__(self):
         self._check_file_and_dir(json_file, output)
@@ -96,14 +99,17 @@ class COCO2YOLO:
         print("converting done, total labels", len(anno_dict))
 
         print("saving txt file...")
-        self._save_txt(anno_dict)
+        self._save_txt(anno_dict, flag)
         print("saving done")
 
-    def _save_txt(self, anno_dict):
+    def _save_txt(self, anno_dict, flag):
         for k, v in anno_dict.items():
-            file_name = v[0][0].split(".")[0] + ".txt"
+            # file_name = v[0][0].split(".")[0] + ".txt"
+            if flag == 'train':
+                file_name = 'train/' + v[0][0].split("/")[1].replace(".jpg", ".txt")
+            elif flag == 'val':
+                file_name = 'valid/' + v[0][0].split("/")[1].replace(".jpg", ".txt")
             with open(os.path.join(output, file_name), 'w', encoding='utf-8') as f:
-                print(k, v)
                 for obj in v:
                     cat_name = self.coco_id_name_map.get(obj[1])
                     category_id = self.coco_name_list.index(cat_name)
