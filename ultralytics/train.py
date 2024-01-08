@@ -5,9 +5,6 @@ import wandb as wb
 from ultralytics import YOLO
 from ultralytics.utils import checks, yaml_load
 
-from ultralytics.engine.trainer import BaseTrainer
-from ultralytics.utils.callbacks.wb import on_pretrain_routine_start
-
 def parse_args():
     parser = argparse.ArgumentParser()
 
@@ -35,7 +32,7 @@ def main(args):
     if not data_dir :
         raise ValueError("Path not found in YAML file")
     
-    wb.init(project=cfg.get('project'),
+    wb.init(project=cfg.get('project') or 'YOLOv8',
                name=cfg.get('model')[:-3] + '_' + str(cfg.get('batch')) + '_' + data_dir,
                entity='ai_tech_level2_objectdetection',
                mode=args.wandbmode)
