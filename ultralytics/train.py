@@ -27,12 +27,12 @@ def main(args):
             yaml_data = yaml.safe_load(file)
             data_dir = yaml_data.get('path', None).split("/")[-1]
     except Exception as e :
-        raise RuntimeError(f"Error reading YAML file: {e}") from e
+        raise RuntimeError(f"Error reading YAML file: {e}")
     
     if not data_dir :
         raise ValueError("Path not found in YAML file")
     
-    wb.init(project=cfg.get('project') if not None else 'YOLOv8',
+    wb.init(project=cfg.get('project'),
                name=cfg.get('model')[:-3] + '_' + str(cfg.get('batch')) + '_' + data_dir,
                entity='ai_tech_level2_objectdetection',
                mode=args.wandbmode)

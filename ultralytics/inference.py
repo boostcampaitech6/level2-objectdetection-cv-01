@@ -11,9 +11,9 @@ from ultralytics import YOLO
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", type=str, help="Specify the file path of the model for training")
-    parser.add_argument("--dataset_path", type=str, default="/data/ephemeral/home/dataset_yolo/images", help="Set the file path where the training dataset images are stored")
-    parser.add_argument("--json_path", type=str, default="/data/ephemeral/home/dataset_yolo/test.json", help="Define the file path for the test JSON file")
+    parser.add_argument("--model", type=str, default= '/data/ephemeral/home/level2-objectdetection-cv-01/ultralytics/YOLOv8/train/weights/best.pt',help="Specify the file path of the model for training")
+    parser.add_argument("--dataset_path", type=str, default="/data/ephemeral/home/dataset_final/images", help="Set the file path where the training dataset images are stored")
+    parser.add_argument("--json_path", type=str, default="/data/ephemeral/home/dataset_final/test.json", help="Define the file path for the test JSON file")
     args = parser.parse_args()
     return args
 
