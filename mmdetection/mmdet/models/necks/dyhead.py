@@ -1,12 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import torch.nn as nn
 import torch.nn.functional as F
-from mmcv.cnn import build_activation_layer, build_norm_layer
+from mmcv.cnn import (build_activation_layer, build_norm_layer, constant_init,
+                      normal_init)
 from mmcv.ops.modulated_deform_conv import ModulatedDeformConv2d
-from mmengine.model import BaseModule, constant_init, normal_init
+from mmcv.runner import BaseModule
 
-from mmdet.registry import MODELS
-from ..layers import DyReLU
+from ..builder import NECKS
+from ..utils import DyReLU
 
 # Reference:
 # https://github.com/microsoft/DynamicHead
@@ -43,7 +44,7 @@ class DyDCNv2(nn.Module):
 
     def forward(self, x, offset, mask):
         """Forward function."""
-        x = self.conv(x.contiguous(), offset, mask)
+        x = self.conv(x.contiguous(), offset.contiguous(), mask)
         if self.with_norm:
             x = self.norm(x)
         return x
@@ -108,7 +109,8 @@ class DyHeadBlock(nn.Module):
             summed_levels = 1
             if level > 0:
                 low_feat = self.spatial_conv_low(x[level - 1], offset, mask)
-                sum_feat += low_feat * self.scale_attn_module(low_feat)
+                sum_feat = sum_feat + \
+                    low_feat * self.scale_attn_module(low_feat)
                 summed_levels += 1
             if level < len(x) - 1:
                 # this upsample order is weird, but faster than natural order
@@ -118,14 +120,15 @@ class DyHeadBlock(nn.Module):
                     size=x[level].shape[-2:],
                     mode='bilinear',
                     align_corners=True)
-                sum_feat += high_feat * self.scale_attn_module(high_feat)
+                sum_feat = sum_feat + high_feat * \
+                    self.scale_attn_module(high_feat)
                 summed_levels += 1
             outs.append(self.task_attn_module(sum_feat / summed_levels))
 
         return outs
 
 
-@MODELS.register_module()
+@NECKS.register_module()
 class DyHead(BaseModule):
     """DyHead neck consisting of multiple DyHead Blocks.
 

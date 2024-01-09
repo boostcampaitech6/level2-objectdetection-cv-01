@@ -2,12 +2,12 @@
 import torch
 import torch.nn as nn
 from mmcv.cnn import ConvModule, DepthwiseSeparableConvModule
-from mmengine.model import BaseModule
+from mmcv.runner import BaseModule
 
-from mmdet.registry import MODELS
+from ..builder import NECKS
 
 
-@MODELS.register_module()
+@NECKS.register_module()
 class SSDNeck(BaseModule):
     """Extra layers of SSD backbone to generate multi-scale feature maps.
 

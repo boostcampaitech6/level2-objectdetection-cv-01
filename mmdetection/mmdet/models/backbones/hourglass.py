@@ -1,15 +1,11 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import List, Sequence
-
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from mmcv.cnn import ConvModule
-from mmengine.model import BaseModule
+from mmcv.runner import BaseModule
 
-from mmdet.registry import MODELS
-from mmdet.utils import ConfigType, OptMultiConfig
-from ..layers import ResLayer
+from ..builder import BACKBONES
+from ..utils import ResLayer
 from .resnet import BasicBlock
 
 
@@ -24,22 +20,21 @@ class HourglassModule(BaseModule):
             and follow-up HourglassModule.
         stage_blocks (list[int]): Number of sub-modules stacked in current and
             follow-up HourglassModule.
-        norm_cfg (ConfigType): Dictionary to construct and config norm layer.
-            Defaults to `dict(type='BN', requires_grad=True)`
-        upsample_cfg (ConfigType): Config dict for interpolate layer.
-            Defaults to `dict(mode='nearest')`
-       init_cfg (dict or ConfigDict, optional): the config to control the
-           initialization.
+        norm_cfg (dict): Dictionary to construct and config norm layer.
+        init_cfg (dict or list[dict], optional): Initialization config dict.
+            Default: None
+        upsample_cfg (dict, optional): Config dict for interpolate layer.
+            Default: `dict(mode='nearest')`
     """
 
     def __init__(self,
-                 depth: int,
-                 stage_channels: List[int],
-                 stage_blocks: List[int],
-                 norm_cfg: ConfigType = dict(type='BN', requires_grad=True),
-                 upsample_cfg: ConfigType = dict(mode='nearest'),
-                 init_cfg: OptMultiConfig = None) -> None:
-        super().__init__(init_cfg)
+                 depth,
+                 stage_channels,
+                 stage_blocks,
+                 norm_cfg=dict(type='BN', requires_grad=True),
+                 init_cfg=None,
+                 upsample_cfg=dict(mode='nearest')):
+        super(HourglassModule, self).__init__(init_cfg)
 
         self.depth = depth
 
@@ -82,7 +77,7 @@ class HourglassModule(BaseModule):
         self.up2 = F.interpolate
         self.upsample_cfg = upsample_cfg
 
-    def forward(self, x: torch.Tensor) -> nn.Module:
+    def forward(self, x):
         """Forward function."""
         up1 = self.up1(x)
         low1 = self.low1(x)
@@ -98,7 +93,7 @@ class HourglassModule(BaseModule):
         return up1 + up2
 
 
-@MODELS.register_module()
+@BACKBONES.register_module()
 class HourglassNet(BaseModule):
     """HourglassNet backbone.
 
@@ -110,14 +105,15 @@ class HourglassNet(BaseModule):
         downsample_times (int): Downsample times in a HourglassModule.
         num_stacks (int): Number of HourglassModule modules stacked,
             1 for Hourglass-52, 2 for Hourglass-104.
-        stage_channels (Sequence[int]): Feature channel of each sub-module in a
+        stage_channels (list[int]): Feature channel of each sub-module in a
             HourglassModule.
-        stage_blocks (Sequence[int]): Number of sub-modules stacked in a
+        stage_blocks (list[int]): Number of sub-modules stacked in a
             HourglassModule.
         feat_channel (int): Feature channel of conv after a HourglassModule.
-        norm_cfg (norm_cfg): Dictionary to construct and config norm layer.
-       init_cfg (dict or ConfigDict, optional): the config to control the
-           initialization.
+        norm_cfg (dict): Dictionary to construct and config norm layer.
+        pretrained (str, optional): model pretrained path. Default: None
+        init_cfg (dict or list[dict], optional): Initialization config dict.
+            Default: None
 
     Example:
         >>> from mmdet.models import HourglassNet
@@ -133,16 +129,17 @@ class HourglassNet(BaseModule):
     """
 
     def __init__(self,
-                 downsample_times: int = 5,
-                 num_stacks: int = 2,
-                 stage_channels: Sequence = (256, 256, 384, 384, 384, 512),
-                 stage_blocks: Sequence = (2, 2, 2, 2, 2, 4),
-                 feat_channel: int = 256,
-                 norm_cfg: ConfigType = dict(type='BN', requires_grad=True),
-                 init_cfg: OptMultiConfig = None) -> None:
+                 downsample_times=5,
+                 num_stacks=2,
+                 stage_channels=(256, 256, 384, 384, 384, 512),
+                 stage_blocks=(2, 2, 2, 2, 2, 4),
+                 feat_channel=256,
+                 norm_cfg=dict(type='BN', requires_grad=True),
+                 pretrained=None,
+                 init_cfg=None):
         assert init_cfg is None, 'To prevent abnormal initialization ' \
                                  'behavior, init_cfg is not allowed to be set'
-        super().__init__(init_cfg)
+        super(HourglassNet, self).__init__(init_cfg)
 
         self.num_stacks = num_stacks
         assert self.num_stacks >= 1
@@ -195,15 +192,15 @@ class HourglassNet(BaseModule):
 
         self.relu = nn.ReLU(inplace=True)
 
-    def init_weights(self) -> None:
+    def init_weights(self):
         """Init module weights."""
         # Training Centripetal Model needs to reset parameters for Conv2d
-        super().init_weights()
+        super(HourglassNet, self).init_weights()
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 m.reset_parameters()
 
-    def forward(self, x: torch.Tensor) -> List[torch.Tensor]:
+    def forward(self, x):
         """Forward function."""
         inter_feat = self.stem(x)
         out_feats = []
