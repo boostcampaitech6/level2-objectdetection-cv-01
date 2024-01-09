@@ -2,7 +2,7 @@
 
 from ultralytics.utils import SETTINGS, TESTS_RUNNING
 from ultralytics.utils.torch_utils import model_info_for_loggers
-
+import yaml
 try:
     assert not TESTS_RUNNING  # do not log pytest
     assert SETTINGS['wandb'] is True  # verify integration is enabled
