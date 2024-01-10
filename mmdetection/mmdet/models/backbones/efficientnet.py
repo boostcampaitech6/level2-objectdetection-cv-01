@@ -7,10 +7,11 @@ import torch
 import torch.nn as nn
 import torch.utils.checkpoint as cp
 from mmcv.cnn.bricks import ConvModule, DropPath
-from mmcv.runner import BaseModule, Sequential
+from mmengine.model import BaseModule, Sequential
 
-from ..builder import BACKBONES
-from ..utils import InvertedResidual, SELayer, make_divisible
+from mmdet.registry import MODELS
+from ..layers import InvertedResidual, SELayer
+from ..utils import make_divisible
 
 
 class EdgeResidual(BaseModule):
@@ -155,7 +156,7 @@ def model_scaling(layer_setting, arch_setting):
     return merge_layer_setting
 
 
-@BACKBONES.register_module()
+@MODELS.register_module()
 class EfficientNet(BaseModule):
     """EfficientNet backbone.
 
@@ -350,7 +351,7 @@ class EfficientNet(BaseModule):
                     se_cfg = None
                 else:
                     # In mmdetection, the `divisor` is deleted to align
-                    # the logic of SELayer with mmcls.
+                    # the logic of SELayer with mmpretrain.
                     se_cfg = dict(
                         channels=mid_channels,
                         ratio=expand_ratio * se_ratio,
@@ -364,7 +365,7 @@ class EfficientNet(BaseModule):
                     mid_channels = int(self.in_channels * expand_ratio)
                     if se_cfg is not None:
                         # In mmdetection, the `divisor` is deleted to align
-                        # the logic of SELayer with mmcls.
+                        # the logic of SELayer with mmpretrain.
                         se_cfg = dict(
                             channels=mid_channels,
                             ratio=se_ratio * expand_ratio,
@@ -386,7 +387,7 @@ class EfficientNet(BaseModule):
                         drop_path_rate=dpr[block_idx],
                         with_cp=self.with_cp,
                         # In mmdetection, `with_expand_conv` is set to align
-                        # the logic of InvertedResidual with mmcls.
+                        # the logic of InvertedResidual with mmpretrain.
                         with_expand_conv=(mid_channels != self.in_channels)))
                 self.in_channels = out_channels
                 block_idx += 1
