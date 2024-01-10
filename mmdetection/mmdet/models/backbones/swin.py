@@ -7,16 +7,17 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint as cp
-from mmcv.cnn import build_norm_layer, constant_init, trunc_normal_init
+from mmcv.cnn import build_norm_layer
 from mmcv.cnn.bricks.transformer import FFN, build_dropout
-from mmcv.cnn.utils.weight_init import trunc_normal_
-from mmcv.runner import BaseModule, ModuleList, _load_checkpoint
-from mmcv.utils import to_2tuple
+from mmengine.logging import MMLogger
+from mmengine.model import BaseModule, ModuleList
+from mmengine.model.weight_init import (constant_init, trunc_normal_,
+                                        trunc_normal_init)
+from mmengine.runner.checkpoint import CheckpointLoader
+from mmengine.utils import to_2tuple
 
-from ...utils import get_root_logger
-from ..builder import BACKBONES
-from ..utils.ckpt_convert import swin_converter
-from ..utils.transformer import PatchEmbed, PatchMerging
+from mmdet.registry import MODELS
+from ..layers import PatchEmbed, PatchMerging
 
 
 class WindowMSA(BaseModule):
@@ -463,7 +464,7 @@ class SwinBlockSequence(BaseModule):
             return x, hw_shape, x, hw_shape
 
 
-@BACKBONES.register_module()
+@MODELS.register_module()
 class SwinTransformer(BaseModule):
     """ Swin Transformer
     A PyTorch implement of : `Swin Transformer:
@@ -481,7 +482,7 @@ class SwinTransformer(BaseModule):
         embed_dims (int): The feature dimension. Default: 96.
         patch_size (int | tuple[int]): Patch size. Default: 4.
         window_size (int): Window size. Default: 7.
-        mlp_ratio (int | float): Ratio of mlp hidden dim to embedding dim.
+        mlp_ratio (int): Ratio of mlp hidden dim to embedding dim.
             Default: 4.
         depths (tuple[int]): Depths of each Swin Transformer stage.
             Default: (2, 2, 6, 2).
@@ -588,8 +589,9 @@ class SwinTransformer(BaseModule):
         if self.use_abs_pos_embed:
             patch_row = pretrain_img_size[0] // patch_size
             patch_col = pretrain_img_size[1] // patch_size
+            num_patches = patch_row * patch_col
             self.absolute_pos_embed = nn.Parameter(
-                torch.zeros((1, embed_dims, patch_row, patch_col)))
+                torch.zeros((1, num_patches, embed_dims)))
 
         self.drop_after_pos = nn.Dropout(p=drop_rate)
 
@@ -615,7 +617,7 @@ class SwinTransformer(BaseModule):
             stage = SwinBlockSequence(
                 embed_dims=in_channels,
                 num_heads=num_heads[i],
-                feedforward_channels=int(mlp_ratio * in_channels),
+                feedforward_channels=mlp_ratio * in_channels,
                 depth=depths[i],
                 window_size=window_size,
                 qkv_bias=qkv_bias,
@@ -667,7 +669,7 @@ class SwinTransformer(BaseModule):
                 param.requires_grad = False
 
     def init_weights(self):
-        logger = get_root_logger()
+        logger = MMLogger.get_current_instance()
         if self.init_cfg is None:
             logger.warn(f'No pre-trained weights for '
                         f'{self.__class__.__name__}, '
@@ -684,7 +686,7 @@ class SwinTransformer(BaseModule):
                                                   f'specify `Pretrained` in ' \
                                                   f'`init_cfg` in ' \
                                                   f'{self.__class__.__name__} '
-            ckpt = _load_checkpoint(
+            ckpt = CheckpointLoader.load_checkpoint(
                 self.init_cfg.checkpoint, logger=logger, map_location='cpu')
             if 'state_dict' in ckpt:
                 _state_dict = ckpt['state_dict']
@@ -745,17 +747,7 @@ class SwinTransformer(BaseModule):
         x, hw_shape = self.patch_embed(x)
 
         if self.use_abs_pos_embed:
-            h, w = self.absolute_pos_embed.shape[1:3]
-            if hw_shape[0] != h or hw_shape[1] != w:
-                absolute_pos_embed = F.interpolate(
-                    self.absolute_pos_embed,
-                    size=hw_shape,
-                    mode='bicubic',
-                    align_corners=False).flatten(2).transpose(1, 2)
-            else:
-                absolute_pos_embed = self.absolute_pos_embed.flatten(
-                    2).transpose(1, 2)
-            x = x + absolute_pos_embed
+            x = x + self.absolute_pos_embed
         x = self.drop_after_pos(x)
 
         outs = []
@@ -770,3 +762,58 @@ class SwinTransformer(BaseModule):
                 outs.append(out)
 
         return outs
+
+
+def swin_converter(ckpt):
+
+    new_ckpt = OrderedDict()
+
+    def correct_unfold_reduction_order(x):
+        out_channel, in_channel = x.shape
+        x = x.reshape(out_channel, 4, in_channel // 4)
+        x = x[:, [0, 2, 1, 3], :].transpose(1,
+                                            2).reshape(out_channel, in_channel)
+        return x
+
+    def correct_unfold_norm_order(x):
+        in_channel = x.shape[0]
+        x = x.reshape(4, in_channel // 4)
+        x = x[[0, 2, 1, 3], :].transpose(0, 1).reshape(in_channel)
+        return x
+
+    for k, v in ckpt.items():
+        if k.startswith('head'):
+            continue
+        elif k.startswith('layers'):
+            new_v = v
+            if 'attn.' in k:
+                new_k = k.replace('attn.', 'attn.w_msa.')
+            elif 'mlp.' in k:
+                if 'mlp.fc1.' in k:
+                    new_k = k.replace('mlp.fc1.', 'ffn.layers.0.0.')
+                elif 'mlp.fc2.' in k:
+                    new_k = k.replace('mlp.fc2.', 'ffn.layers.1.')
+                else:
+                    new_k = k.replace('mlp.', 'ffn.')
+            elif 'downsample' in k:
+                new_k = k
+                if 'reduction.' in k:
+                    new_v = correct_unfold_reduction_order(v)
+                elif 'norm.' in k:
+                    new_v = correct_unfold_norm_order(v)
+            else:
+                new_k = k
+            new_k = new_k.replace('layers', 'stages', 1)
+        elif k.startswith('patch_embed'):
+            new_v = v
+            if 'proj' in k:
+                new_k = k.replace('proj', 'projection')
+            else:
+                new_k = k
+        else:
+            new_v = v
+            new_k = k
+
+        new_ckpt['backbone.' + new_k] = new_v
+
+    return new_ckpt
