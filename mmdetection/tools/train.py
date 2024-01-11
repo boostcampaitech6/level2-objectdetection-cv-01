@@ -1,14 +1,16 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import argparse
+import sys
 import os
 import os.path as osp
+
+sys.path.insert(0, "../mmdetection")
 
 from mmengine.config import Config, DictAction
 from mmengine.registry import RUNNERS
 from mmengine.runner import Runner
 
 from mmdet.utils import setup_cache_size_limit_of_dynamo
-import wandb
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train a detector')
