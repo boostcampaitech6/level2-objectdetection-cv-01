@@ -3,7 +3,10 @@ import argparse
 import os
 import os.path as osp
 import warnings
+import sys
 from copy import deepcopy
+
+sys.path.insert(0, "../mmdetection")
 
 from mmengine import ConfigDict
 from mmengine.config import Config, DictAction
