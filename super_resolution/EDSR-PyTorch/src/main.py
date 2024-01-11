@@ -8,7 +8,7 @@ from option import args
 from trainer import Trainer
 
 # GPU 디바이스 번호 설정
-device_id = 1
+device_id = 0
 torch.cuda.set_device(device_id)
 
 torch.manual_seed(args.seed)
