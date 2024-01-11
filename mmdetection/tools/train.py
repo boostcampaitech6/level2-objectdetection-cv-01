@@ -8,7 +8,7 @@ from mmengine.registry import RUNNERS
 from mmengine.runner import Runner
 
 from mmdet.utils import setup_cache_size_limit_of_dynamo
-
+import wandb
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train a detector')

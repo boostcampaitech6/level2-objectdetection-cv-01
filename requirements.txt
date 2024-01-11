@@ -15,7 +15,3 @@ pandas
 seaborn
 plotly
 nbformat
-
-# MM Detection Specific Dependencies
-mmcv==2.1.0
-mmengine==0.10.2
