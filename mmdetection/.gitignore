@@ -1,3 +1,39 @@
+# 기본 설정 : 모든 파일 무시
+*
+
+# 이하 파일/디렉터리는 무시하지 않음
+!.circleci/
+!.dev_scripts/
+!.github/
+!configs/
+!custom_config/
+!demo/
+!docker/
+!docs/
+!mmdet/
+!projects/
+!recycle_config/
+!requirements/
+!resources/
+!tests/
+!tools/
+!.gitignore
+!.owners.yml
+!.pre-commit-config-zh-cn.yaml
+!.pre-commit-config.yaml
+!.readthedocs.yml
+!CITATION.cff
+!LICENSE
+!MANIFEST.in
+!README.md
+!README_zh-CN.md
+!dataset-index.yml
+!model-index.yml
+!pytest.ini
+!requirements.txt
+!setup.cfg
+!setup.py
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
