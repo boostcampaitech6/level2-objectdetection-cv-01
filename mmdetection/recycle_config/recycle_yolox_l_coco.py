@@ -3,6 +3,24 @@ _base_ = [
 ] # 모델 config 파일 주소를 상대주소로 가져옴(지금 파일 기준!!!!!! 무조건!!!!! 안그러면 에러남)
 
 
+"""
+변경된 부분
+
+
+
+
+"""
+_base_ = './yolox_s_8xb8-300e_coco.py'
+
+# model settings
+model = dict(
+    backbone=dict(deepen_factor=1.0, widen_factor=1.0),
+    neck=dict(
+        in_channels=[256, 512, 1024], out_channels=256, num_csp_blocks=3),
+    bbox_head=dict(in_channels=256, feat_channels=256))
+
+
+
 # model 끝단에 num_classes 부분을 바꿔주기 위해 해당 모듈을 불러와 선언해줍니다.
 model = dict(
     bbox_head=dict(
