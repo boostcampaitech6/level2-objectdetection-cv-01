@@ -1,6 +1,8 @@
 _base_ = [
-    '../_base_/datasets/coco_detection.py', '../_base_/default_runtime.py'
+    '../configs/_base_/datasets/coco_detection.py',
+    '../configs/_base_/default_runtime.py'
 ]
+
 model = dict(
     type='DINO',
     num_queries=900,  # num_matching_queries
@@ -59,7 +61,7 @@ model = dict(
         temperature=20),  # 10000 for DeformDETR
     bbox_head=dict(
         type='DINOHead',
-        num_classes=80,
+        num_classes=10,
         sync_cls_avg_factor=True,
         loss_cls=dict(
             type='FocalLoss',
