@@ -117,6 +117,7 @@ docs/modelzoo_statistics.md
 mmdet/.mim
 work_dirs/
 recycle_config/
+*.sh
 
 # Pytorch
 *.pth
