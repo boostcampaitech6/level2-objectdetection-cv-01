@@ -9,7 +9,7 @@ from datetime import datetime
 # Dataset path
 dataDir = '/data/ephemeral/home/sr_dataset'
 annotation_path = '/data/ephemeral/home/sr_dataset/train_x2_SR.json'
-original_anno_path = '/data/ephemeral/home/sr_dataset/train.json'
+original_anno_path = '/data/ephemeral/home/dataset/train_kfold_0.json'
 
 # saved path
 subimgs_path = '/data/ephemeral/home/sr_dataset/centerimages'
