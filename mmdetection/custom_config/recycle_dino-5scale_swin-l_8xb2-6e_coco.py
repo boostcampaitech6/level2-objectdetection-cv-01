@@ -3,15 +3,6 @@ _base_ = [
     '../configs/_base_/default_runtime.py'
 ]
 
-"""
-참고사항
-
-각 섹션 별 주석으로 작성되어 있는 내용을 잘 확인하고 학습 바랍니다.
-현재 작성된 내용이 swin-l_dino의 default 내용이며, 변경된 내용은 DataLoader 부분의 Randresize 부분만 고정된
-image size (1024, 1024)로 변경되었습니다.
-현재 공유되는 현재 버전을 기반으로 각자 맡으신 아이디어를 실험하시면 되겠습니다.
-"""
-
 pretrained = 'https://github.com/SwinTransformer/storage/releases/download/v1.0.0/swin_large_patch4_window12_384_22k.pth'
 
 ### Model ###
@@ -131,13 +122,14 @@ color_space = [
     [dict(type='Brightness')],
 ]
 
+### Augmenation Rule 확인 !!!
 image_size = (1024, 1024)
 train_pipeline = [
     dict(type='LoadImageFromFile', backend_args=_base_.backend_args),
     dict(type='LoadAnnotations', with_bbox=True),
     dict(type='Resize', scale=image_size, keep_ratio=True),
     dict(type='RandomFlip', prob=0.5),
-    dict(
+    dict(# LSJ
         type='RandomResize',
         scale=image_size,
         ratio_range=(0.1, 2.0),
@@ -148,7 +140,7 @@ train_pipeline = [
         crop_size=image_size,
         recompute_bbox=True,
         allow_negative_crop=True),
-    dict(type='RandAugment', aug_space=color_space, aug_num=1),
+    # dict(type='RandAugment', aug_space=color_space, aug_num=1),
     dict(type='PackDetInputs')
 ]
 
@@ -164,7 +156,6 @@ test_pipeline = [
 ]
 
 data_root = '/data/ephemeral/home/dataset/'
-
 metainfo = {
     'classes': ('General trash', 'Paper', 'Paper pack', 'Metal', 'Glass',
                 'Plastic', 'Styrofoam', 'Plastic bag', 'Battery', 'Clothing',),
@@ -174,6 +165,7 @@ metainfo = {
     ]
 }
 
+### JSON 파일 정보 확인 !!!
 train_dataloader = dict(
     batch_size=2,
     num_workers=4,
@@ -216,7 +208,8 @@ val_evaluator = dict(
 test_evaluator = dict(ann_file=data_root + 'test.json')
 
 #### Learning Policy ####
-max_epochs = 6
+max_epochs = 12
+
 train_cfg = dict(
     type='EpochBasedTrainLoop', max_epochs=max_epochs, val_interval=1)
 val_cfg = dict(type='ValLoop')
@@ -224,28 +217,21 @@ test_cfg = dict(type='TestLoop')
 
 # Select Multistep or CosineAnnealing
 param_scheduler = [
-    dict(
-        type='LinearLR',
-        start_factor=0.0001,
-        by_epoch=False,
-        begin=0,
-        end=2000),
-    dict(
-        type='MultiStepLR',
-        begin=1,
-        end=max_epochs,
-        by_epoch=True,
-        milestones=[4, 5],
-        gamma=0.1),
     # dict(
-    #     type='CosineAnnealingLR',
-    #     eta_min=0.0,
+    #     type='MultiStepLR',
     #     begin=1,
-    #     T_max=max_epochs,
     #     end=max_epochs,
     #     by_epoch=True,
-    #     convert_to_iter_based=True)
-]
+    #     milestones=[4, 5],
+    #     gamma=0.1),
+    dict(
+        type='CosineAnnealingLR',
+        eta_min=0.0,
+        begin=0,
+        T_max=max_epochs,
+        end=max_epochs,
+        by_epoch=True,
+        convert_to_iter_based=True)]
 
 ### Optimizer ###
 optim_wrapper = dict(
@@ -264,9 +250,9 @@ vis_backends = [
     dict(type='WandbVisBackend',
          init_kwargs={
             'project': 'mmdetection',
-            'entity': 'ai_tech_level2_objectdetection',
-            'group': 'DINO',
-            'name': 'swin-l_epochs6_randaug_randresize_randcrop_5scale'  # name 변경 해줄 것!
+            'entity': 'ai_tech_level2_objectdetection2',
+            'group': 'dino',
+            'name': 'swin-l_5scale_original_epochs12'  # ex) swin-l_5scale_original_randaug_epochs6 형식으로 변경 해줄 것!
          })]
 
 
