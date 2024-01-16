@@ -149,7 +149,6 @@ train_pipeline = [
         recompute_bbox=True,
         allow_negative_crop=True),
     dict(type='RandAugment', aug_space=color_space, aug_num=1),
-    dict(type='RandAugment', aug_space=color_space, aug_num=1),
     dict(type='PackDetInputs')
 ]
 
