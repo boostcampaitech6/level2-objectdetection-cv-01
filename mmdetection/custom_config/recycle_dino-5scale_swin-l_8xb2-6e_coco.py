@@ -209,6 +209,7 @@ test_evaluator = dict(ann_file=data_root + 'test.json')
 
 #### Learning Policy ####
 max_epochs = 12
+
 train_cfg = dict(
     type='EpochBasedTrainLoop', max_epochs=max_epochs, val_interval=1)
 val_cfg = dict(type='ValLoop')
@@ -230,8 +231,7 @@ param_scheduler = [
         T_max=max_epochs,
         end=max_epochs,
         by_epoch=True,
-        convert_to_iter_based=True)
-]
+        convert_to_iter_based=True)]
 
 ### Optimizer ###
 optim_wrapper = dict(
