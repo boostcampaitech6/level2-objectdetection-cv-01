@@ -15,7 +15,7 @@ original_anno_path = '/data/ephemeral/home/dataset/train_kfold_0.json'
 subimgs_path = '/data/ephemeral/home/sr_dataset/centerimages'
 updated_annotation_path = '/data/ephemeral/home/sr_dataset/train_x2_SR_center.json'
 
-def update_annotations_for_subimage(annotations, subimg_info, img_id):
+def update_annotations_for_subimage(annotations, subimg_info, img_id, anno_id):
     updated_annotations = []
     x_offset, y_offset, subimg_width, subimg_height = subimg_info
 
@@ -35,6 +35,7 @@ def update_annotations_for_subimage(annotations, subimg_info, img_id):
             updated_ann = ann.copy()
             updated_ann['bbox'] = [new_x, new_y, width, height]
             updated_ann['image_id'] = img_id
+            updated_ann['id'] = anno_id
             updated_annotations.append(updated_ann)
     
     return updated_annotations
@@ -47,6 +48,7 @@ with open(annotation_path, 'r') as file:
 new_images = []
 new_annotations = []
 new_img_id = max([img['id'] for img in data['images']]) + 1
+new_annotation_id = max([anno['id'] for anno in data['annotations']]) + 1
 
 # Load images
 coco = COCO(annotation_path)
@@ -62,7 +64,7 @@ for idx in os.listdir(os.path.join(dataDir,'train')):
     centerimg = (img_width // 4, img_width // 4, img_width // 2, img_height // 2)
 
     # Update annotations for center image
-    updated_anns = update_annotations_for_subimage(anns, centerimg, new_img_id)
+    updated_anns = update_annotations_for_subimage(anns, centerimg, new_img_id, new_annotation_id)
 
     x_offset, y_offset, subimg_width, subimg_height = centerimg
     subimg = I.crop((x_offset, y_offset, x_offset + subimg_width, y_offset + subimg_height))
@@ -85,8 +87,9 @@ for idx in os.listdir(os.path.join(dataDir,'train')):
 
         # bbox가 있는 경우만 subimg 저장 
         subimg.save(os.path.join(subimgs_path, subimg_filename))
-    
+
         new_img_id += 1
+        new_annotation_id += 1
 
 # 추가는 train.json 파일로 해야함
 with open(original_anno_path, 'r') as file:
