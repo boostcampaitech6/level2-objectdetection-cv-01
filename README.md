@@ -164,12 +164,26 @@
 > ### Methods Summary
 
 
-- Data Cleaning: Relabeling 진행함
-- Reclassified dataset: General Trash 내의 객체들을 특징에 따라 새로운 클래스로 재분류함
-- Deblur: 흐린 이미지 분류 및 보정 기법
-- Super Resolution: Super Resolution 기법을 적용하여 이미지 해상도를 높임
-- Augmentation: 다양한 증강 기법을 적용하여 좋은 성능을 내는 기법을 찾아 적용함
-
+1) Data Cleaning: 
+- 잘못 레이블 된 데이터들이 다수 발견
+- Supervisley를 통해 Relabeling 수행
+2) Reclassify General Trash Class:
+ - EDA를 통해 General Trash 클래스 이미지들이 다양한 객체로 이루어져 있음이 발견
+ - 해당 클래스를 재분류 하여 기존 10개의 클래스에 대한 분류를 20개 클래스로 추가 분류하여 검출 성능 개선을 하고 자 함
+3) Deblur:
+- EDA를 통해 야간에 객체가 흐리게 촬영된 이미지들을 다수 발견
+- 흐린 이미지를 분류 한 다음 보정 기법을 적용하여 객체 검출 성능 개선을 하고자 함
+4) Super Resolution:
+- EDA를 통해 작고 흐릿한 이미지들을 다수 발견함
+- Super Resolution 기법으로 2배 해상도의 데이터를 생성하여 객체 검출 성능을 개선하고자 함
+5) Augmentation:
+- EDA를 통해 객체들의 크기 및 위치를 고려했을 때 RandomResize, RandomCrop, RandomAugment 방법을 적용했을 때 성능 개선을 기대함
+- 학습시 모델의 일반화를 높이기 위한 방법으로 다양한 Augmentation 조합을 적용함
+6) Models:
+- YOLO 등의 1-stage 모델의 경우 낮은 객체 검출 성능을 보임
+- 최근 연구로 제안된 DINO, Co-Detr과 같은 모델들을 학습 및 평가함
+7) Ensemble:
+- 여러 모델들의 성능을 조합하기 위한 방법으로 Confusion Matrix로 모델별 특징을 파악하여 앙상블에 활용함
 </br>
 
 
@@ -177,7 +191,9 @@
 
 <!-- 전체 파이프라인 이미지 및 methods 설명 -->
 > ### Data Cleaning
-- 데이터 시각화를 통해 다수의 레이블 오류가 발견되어 Supervisely를 활용해 데이터 레이블 수정 후 실험 진행함
+- 데이터 시각화를 통해 다수의 레이블 오류가 발견되어 Supervisely를 활용해 데이터 레이블 수정 후 실험 진행
+- 실험 결과 수정한 데이터셋이 기존의 데이터셋보다 낮은 성능 결과를 보임
+- 이는 Test dataset과 train dataset 모두 유사한 오류 경향성을 가지는 것으로 추정되어 수정하지 않은 Original dataset으로 이후 실험을 진행
 
 <!-- 실험 결과 표 -->
 | Dataset | Model | Backbone | mAP_50(Val) | mAP_50(Test) |
@@ -206,6 +222,8 @@
 
 - 다양한 특성을 지닌 객체들로 구성된 General Trash 클래스를 10개의 클래스로 재분류하여 총20개의 클래스로 이루어진 Class-20 데이터셋으로 재구성함
 - Class-20의 General trash 클래스 중 높은 mAP를 보인 3개의 클래스를 선정해 12개의 클래스로 이루어진 Class-12, 13개의 클래스로 이루어진 Class-13 데이터셋으로 재구성함
+- 실험 결과 클래스를 추가하여 검출한 경우보다 기존의 Original 성능과 비슷하거나 낮음
+- 이는 General class에 다양한 종류의 객체들이 있음에도 불구하고 모델이 충분히 학습 및 추론이 가능한 것으로 판단
 <!-- 실험 결과 표 -->
     
 | **Dataset** | **Model** | **Backbone** | **Epochs** | **mAP_50(Test)** |
@@ -214,7 +232,6 @@
 |   Class-20  |    Dino   |    Swin-l    |     23     |            0.679            |
 |   Class-12  |    Dino   |    Swin-l    |     23     |            0.673            |
 |   Class-13  |    Dino   |    Swin-l    |     23     |            0.711            |
-
 
 
 
@@ -232,17 +249,19 @@
 
 </br>
 
-| Dataset | Model | Backbone | mAP_50(Val) |
-|:-----------:|:---------:|:--------------------:|:------------------:|
-|   Original  |    Dino   |    Swin-l    |   0.716   |
-|  Deblurred  |    Dino   |    Swin-l    |   0.704   |
+| Dataset | Model | Backbone | mAP_50(Val) | mAP_50(Test)
+|:-----------:|:---------:|:--------------------:|:------------------:|:------------------:|
+|   Original  |    Dino   |    Swin-l    |   0.716   | 0.6938 |
+|  Deblurred  |    Dino   |    Swin-l    |   0.704   | 0.6825 |
 
 </br>
 
 
 > ### Super Resolution
+ - EDA를 통해 작고 흐릿한 이미지들을 다수 발견함
  - Enhanced Deep Residual Networks for Single Image Super-Resolution에 제안된 SR 기법을 적용하여 2배 해상도의 이미지로 변환함
  - 해당 이미지를 Center-crop 또는 Multi-crop 수행한 뒤 이를 기존 데이터셋과 합께 학습 데이터로 활용함
+ - 실험 결과 1개의 이미지만 추가로 사용하는 Center-crop에 비해 4배의 학습 데이터를 사용하는 Multi-crop 방식에서 높은 성능 개선을 확인할 수 있음
 
 <center>
 <img src="https://github.com/Eddie-JUB/Portfolio/assets/71426994/d099961e-b432-46ee-bef0-149a56f405b0" width="400" height="">
@@ -262,11 +281,11 @@
 
 <!-- <center>  -->
 
-| Dataset            | Model | Backbone | Epoch | mAP_50(Val) |
-|:-------:|:----------:|:-----------------------:|:-------:|:---------:|
-| Original           | DINO  | Swin-l   | 20    | 0.731   |
-| Original+SR(Center-Crop)      | DINO  | Swin-l   | 25    | 0.802   |
-| Original+SR(Multi-Crop) | DINO  | Swin-l   | 25    | 0.817   |
+| Dataset            | Model | Backbone | Epoch | mAP_50(Val) | mAP_50(Test)
+|:-------:|:----------:|:-----------------------:|:-------:|:---------:|:---------:|
+| Original           | DINO  | Swin-l   | 20    | 0.731   | 0.7172 |
+| Original+SR(Center-Crop)      | DINO  | Swin-l   | 25    | 0.802   | 0.721 |
+| Original+SR(Multi-Crop) | DINO  | Swin-l   | 25    | 0.817   |  0.7398 |
 
 <!-- </center> -->
     
@@ -278,7 +297,7 @@
 
 | **Augmentation**      | **Info**                 | **mAP_50(Val)** |
 |:-----------------------:|:--------------------------:|:-----------:|
-| None                  | -                        | 0.554     |
+| None                  | -                        | 0.554     | 
 | RandomCrop            | RandomCrop               | 0.565     |
 | RandomCenterCropPad   | CenterCrop + pad         | 0.568     |
 | RandomAffine          | Geometric transformation | 0.561     |
@@ -291,7 +310,8 @@
 
 
 > ### Models
-- 다양한 모델을 활용하기 위해 여러 프레임워크를 활용해서 모델을 평가함
+- 1-stage, 2-stage 모델부터 레거시 및 최신 모델을 활용함
+- 다양한 모델을 활용하기 위해 아래의 여러 프레임워크를 활용해서 모델을 평가함
 ```bash
 Frameworks : Detectron2 v0.6, Ultralytics v8.1, mmDetection v3.3.0
 ```
