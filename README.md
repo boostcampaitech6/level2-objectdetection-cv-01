@@ -266,7 +266,7 @@
 </br>
 
 > ### Augmentation
-- EDA를 통해 객체들의 크기 및 위치를 고려했을 때 RandomResize, RandomCrop, RandomAugment 방법을 적용했을 때 성능 개선을 기대함
+- 객체들의 크기 및 위치를 고려했을 때 RandomResize, RandomCrop, RandomAugment 방법을 적용했을 때 성능 개선을 기대함
 - 학습시 모델의 일반화를 높이기 위한 방법으로 다양한 증강 기법을 적용한 뒤, 여러 평가 지표를 기반으로 증강 기법을 선정함
 - 기하학적 변환을 적용할 경우 IoU 임계값에 따라 mAP가 크게 달라지는 경향을 보여줌
 - 색상 변환에 대한 RandAugment 기법을 적용한 결과 강건하고 높은 성능 향상을 보여줌
