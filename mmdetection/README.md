@@ -1,5 +1,5 @@
 # MMDetection
-
+Official Repo : https://github.com/open-mmlab/mmdetection
 ## How to install environment
 ```
 pip install openmim
