@@ -1,0 +1,17 @@
+# Basic Dependencies
+cython
+numpy
+cityscapesscripts
+imagecorruptions
+scikit-learn
+matplotlib
+pycocotools
+scipy
+shapely
+six
+terminaltables
+funcy
+pandas
+seaborn
+plotly
+nbformat
